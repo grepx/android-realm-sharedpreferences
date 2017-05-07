@@ -3,12 +3,21 @@ package com.grepx.realmsharedpreferences;
 import android.content.SharedPreferences;
 import android.support.annotation.Nullable;
 import io.realm.Realm;
+import io.realm.RealmConfiguration;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
 public class RealmSharedPreferences implements SharedPreferences {
 
+  private final Realm realm;
+
   public RealmSharedPreferences(String name) {
+    RealmConfiguration realmConfiguration =
+        new RealmConfiguration.Builder()
+            .name(name)
+            .build();
+    realm = Realm.getInstance(realmConfiguration);
   }
 
   @Override public Map<String, ?> getAll() {
@@ -16,7 +25,6 @@ public class RealmSharedPreferences implements SharedPreferences {
   }
 
   @Nullable @Override public String getString(String key, @Nullable String defValue) {
-    Realm realm = Realm.getDefaultInstance();
     RealmSharedPref realmSharedPref = realm.where(RealmSharedPref.class).findFirst();
     return realmSharedPref != null ? realmSharedPref.valueString : null;
   }
@@ -57,5 +65,62 @@ public class RealmSharedPreferences implements SharedPreferences {
   @Override public void unregisterOnSharedPreferenceChangeListener(
       OnSharedPreferenceChangeListener listener) {
 
+  }
+
+  public class RealmSharedPreferenceEditor implements Editor {
+    // todo: this could be made more efficient using a handler
+    LinkedList<Runnable> sharedPreferenceOperations = new LinkedList<>();
+
+    @Override public Editor putString(final String key, @Nullable final String value) {
+      sharedPreferenceOperations.add(new Runnable() {
+        @Override public void run() {
+          realm.copyToRealmOrUpdate(new RealmSharedPref(key, value));
+        }
+      });
+      return this;
+    }
+
+    @Override public Editor putStringSet(String key, @Nullable Set<String> values) {
+      return null;
+    }
+
+    @Override public Editor putInt(String key, int value) {
+      return null;
+    }
+
+    @Override public Editor putLong(String key, long value) {
+      return null;
+    }
+
+    @Override public Editor putFloat(String key, float value) {
+      return null;
+    }
+
+    @Override public Editor putBoolean(String key, boolean value) {
+      return null;
+    }
+
+    @Override public Editor remove(String key) {
+      return null;
+    }
+
+    @Override public Editor clear() {
+      return null;
+    }
+
+    @Override public boolean commit() {
+      // Not supported since I can't force Realm to write data to the file system synchronously
+      // and therefore cannot provide the same contract. apply() is the preferred choice
+      // in the vast majority of apps anyway.
+      throw new UnsupportedOperationException();
+    }
+
+    @Override public void apply() {
+      realm.beginTransaction();
+      for (Runnable sharedPreferenceOperation : sharedPreferenceOperations) {
+        sharedPreferenceOperation.run();
+      }
+      realm.commitTransaction();
+    }
   }
 }

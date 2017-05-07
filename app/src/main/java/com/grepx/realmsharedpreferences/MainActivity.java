@@ -16,11 +16,7 @@ public class MainActivity extends AppCompatActivity {
         getSharedPreferences("SharedPreferences", Context.MODE_PRIVATE);
 
     // todo: put tests in a connected android test
-    // mixed read/write with high data locality test
-    for (int i = 0; i < 1000; i++) {
-      //sharedPreferences.edit()
-      //                 .putString("key")
-    }
+
 
     // very simple library to test this idea, comes with a set of performance tests to compare with
     // a traditional native shared preferences
@@ -39,6 +35,6 @@ public class MainActivity extends AppCompatActivity {
 
     // mixed read/write big string values performance test
 
-    // file size tests for large datasets
+    // file size/start speed tests for large datasets
   }
 }
