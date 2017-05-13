@@ -3,10 +3,12 @@ package com.grepx.realmsharedpreferences;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.support.test.InstrumentationRegistry;
+import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
 import android.util.Log;
 import java.util.HashSet;
 import java.util.Random;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -15,6 +17,7 @@ public class SharedPreferencesPerformanceTest {
 
   private static final String TAG = SharedPreferencesPerformanceTest.class.getSimpleName();
 
+  String testConfigurationName;
   SharedPreferences sharedPreferences;
   int readWriteType;
   int dataLocality;
@@ -36,33 +39,29 @@ public class SharedPreferencesPerformanceTest {
 
   final int RECORD_COUNT_LOW = 50;
   final int RECORD_COUNT_MEDIUM = 250;
-  final int RECORD_COUNT_LARGE = 1000;
+  final int RECORD_COUNT_HIGH = 1000;
 
   @Test
   public void sharedPreferencesReadHighLocalityTest() throws Exception {
-    Context context = InstrumentationRegistry.getTargetContext();
-    SharedPreferences sharedPreferences =
-        context.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE);
+    testConfiguration(IMPL_SHARED_PREFERENCES, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_LOW);
+    testConfiguration(IMPL_SHARED_PREFERENCES, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_MEDIUM);
+    testConfiguration(IMPL_SHARED_PREFERENCES, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_HIGH);
 
-    // mixed read/write with high data locality test
-    long startTime = System.nanoTime();
-    for (int testStep = 0; testStep < 50; testStep++) {
-      sharedPreferences.edit()
-                       .putString(getKey(testStep), getValueString(testStep))
-                       .apply();
-    }
-    printElapsedTime("SharedPreferences Read HighLocality - ", startTime);
+    //testConfiguration(IMPL_REALM, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_LOW);
+    //testConfiguration(IMPL_REALM, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_MEDIUM);
+    //testConfiguration(IMPL_REALM, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_HIGH);
   }
 
-  private void testConfiguration(String configName, int implementation, int readWriteType,
+  private void testConfiguration(int implementation, int readWriteType,
                                  int dataLocality, int recordCount) {
+    testConfigurationName =
+        getTestConfigurationName(implementation, readWriteType, dataLocality, recordCount);
     this.readWriteType = readWriteType;
     this.dataLocality = dataLocality;
     this.recordCount = recordCount;
     // arbitrary seed to create a deterministic random number generator
     random = new Random(8123576229384l);
 
-    SharedPreferences sharedPreferences;
     switch (implementation) {
       case IMPL_SHARED_PREFERENCES:
         sharedPreferences =
@@ -78,10 +77,27 @@ public class SharedPreferencesPerformanceTest {
     }
 
     initPreferences();
+    testPreferences();
   }
 
   private void initPreferences() {
+    for (int i = 0; i < recordCount; i++) {
+      writeRandomValue(i);
+    }
+  }
 
+  private void testPreferences() {
+    long startTime = System.nanoTime();
+    for (int i = 0; i < recordCount; i++) {
+      readValue(i);
+    }
+    for (int i = 0; i < recordCount; i++) {
+      writeRandomValue(i);
+    }
+    for (int i = 0; i < recordCount; i++) {
+      readValue(i);
+    }
+    printElapsedTime(testConfigurationName, startTime);
   }
 
   private void writeRandomValue(int prefIndex) {
@@ -93,14 +109,30 @@ public class SharedPreferencesPerformanceTest {
                          .apply();
         break;
       case 1:
+        sharedPreferences.edit()
+                         .putFloat(getKey(prefIndex), random.nextFloat())
+                         .apply();
         break;
       case 2:
+        sharedPreferences.edit()
+                         .putInt(getKey(prefIndex), random.nextInt())
+                         .apply();
         break;
       case 3:
+        sharedPreferences.edit()
+                         .putLong(getKey(prefIndex), random.nextLong())
+                         .apply();
         break;
       case 4:
+        sharedPreferences.edit()
+                         .putString(getKey(prefIndex), "random string " + random.nextLong())
+                         .apply();
         break;
       case 5:
+        // todo
+        sharedPreferences.edit()
+                         .putStringSet(getKey(prefIndex), new HashSet<String>())
+                         .apply();
         break;
     }
   }
@@ -130,19 +162,44 @@ public class SharedPreferencesPerformanceTest {
   }
 
   private String getKey(int prefIndex) {
-    return "test_key" + prefIndex;
+    return "test_key_" + prefIndex;
   }
 
   private void printElapsedTime(String configuration, long startTime) {
-    Log.d(TAG, configuration + (System.nanoTime() - startTime) / 1000000l + "ms");
+    Log.d(TAG, configuration + ": " + (System.nanoTime() - startTime) / 1000000l + "ms");
   }
 
-  private void writeString(int testStep) {
-    //sharedPreferences.edit()
-    //                 .putString()
-  }
-
-  private String getValueString(int testStep) {
-    return "test_value" + testStep;
+  private String getTestConfigurationName(int implementation, int readWriteType,
+                                          int dataLocality, int recordCount) {
+    String result = "";
+    switch (implementation) {
+      case IMPL_REALM:
+        result += "REALM_";
+        break;
+      case IMPL_SHARED_PREFERENCES:
+        result += "SHARED_PREFERENCES_";
+        break;
+    }
+    switch (readWriteType) {
+      case TYPE_READ:
+        result += "READ_";
+        break;
+      case TYPE_WRITE:
+        result += "WRITE_";
+        break;
+      case TYPE_READ_WRITE:
+        result += "READ_WRITE_";
+        break;
+    }
+    switch (dataLocality) {
+      case LOCALITY_HIGH:
+        result += "HIGH_LOCALITY_";
+        break;
+      case LOCALITY_LOW:
+        result += "LOW_LOCALITY_";
+        break;
+    }
+    result += recordCount;
+    return result;
   }
 }
