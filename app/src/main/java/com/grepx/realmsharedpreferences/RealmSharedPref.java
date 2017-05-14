@@ -1,8 +1,11 @@
 package com.grepx.realmsharedpreferences;
 
 import io.realm.RealmObject;
+import io.realm.annotations.PrimaryKey;
 
 public class RealmSharedPref extends RealmObject {
+
+  public static final String KEY = "key";
 
   public RealmSharedPref() {
   }
@@ -12,18 +15,12 @@ public class RealmSharedPref extends RealmObject {
     this.valueString = valueString;
   }
 
-  public RealmSharedPref(String key, long valueInt) {
+  public RealmSharedPref(String key, long valueLong) {
     this.key = key;
-    this.valueInt = valueInt;
+    this.valueLong = valueLong;
   }
 
-  public RealmSharedPref(String key, float valueFloat) {
-    this.key = key;
-    this.valueFloat = valueFloat;
-  }
-
-  String key;
+  @PrimaryKey String key;
   String valueString;
-  long valueInt;
-  float valueFloat;
+  long valueLong;
 }

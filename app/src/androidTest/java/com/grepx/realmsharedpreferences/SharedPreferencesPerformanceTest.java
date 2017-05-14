@@ -3,12 +3,10 @@ package com.grepx.realmsharedpreferences;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.support.test.InstrumentationRegistry;
-import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
 import android.util.Log;
 import java.util.HashSet;
 import java.util.Random;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -42,14 +40,33 @@ public class SharedPreferencesPerformanceTest {
   final int RECORD_COUNT_HIGH = 1000;
 
   @Test
-  public void sharedPreferencesReadHighLocalityTest() throws Exception {
+  public void sharedPreferencesReadWriteHighLocality50() throws Exception {
     testConfiguration(IMPL_SHARED_PREFERENCES, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_LOW);
-    testConfiguration(IMPL_SHARED_PREFERENCES, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_MEDIUM);
-    testConfiguration(IMPL_SHARED_PREFERENCES, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_HIGH);
+  }
 
-    //testConfiguration(IMPL_REALM, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_LOW);
-    //testConfiguration(IMPL_REALM, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_MEDIUM);
-    //testConfiguration(IMPL_REALM, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_HIGH);
+  @Test
+  public void sharedPreferencesReadWriteHighLocality250() throws Exception {
+    testConfiguration(IMPL_SHARED_PREFERENCES, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_MEDIUM);
+  }
+
+  @Test
+  public void sharedPreferencesReadWriteHighLocality1000() throws Exception {
+    testConfiguration(IMPL_SHARED_PREFERENCES, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_HIGH);
+  }
+
+  @Test
+  public void realmReadWriteHighLocality50() throws Exception {
+    testConfiguration(IMPL_REALM, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_LOW);
+  }
+
+  @Test
+  public void realmReadWriteHighLocality250() throws Exception {
+    testConfiguration(IMPL_REALM, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_MEDIUM);
+  }
+
+  @Test
+  public void realmReadWriteHighLocality1000() throws Exception {
+    testConfiguration(IMPL_REALM, TYPE_READ_WRITE, LOCALITY_HIGH, RECORD_COUNT_HIGH);
   }
 
   private void testConfiguration(int implementation, int readWriteType,

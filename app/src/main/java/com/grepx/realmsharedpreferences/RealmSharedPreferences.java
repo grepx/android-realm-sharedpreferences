@@ -4,6 +4,7 @@ import android.content.SharedPreferences;
 import android.support.annotation.Nullable;
 import io.realm.Realm;
 import io.realm.RealmConfiguration;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
@@ -16,6 +17,7 @@ public class RealmSharedPreferences implements SharedPreferences {
     RealmConfiguration realmConfiguration =
         new RealmConfiguration.Builder()
             .name(name)
+            .deleteRealmIfMigrationNeeded() // todo: remove
             .build();
     realm = Realm.getInstance(realmConfiguration);
   }
@@ -25,36 +27,49 @@ public class RealmSharedPreferences implements SharedPreferences {
   }
 
   @Nullable @Override public String getString(String key, @Nullable String defValue) {
-    RealmSharedPref realmSharedPref = realm.where(RealmSharedPref.class).findFirst();
-    return realmSharedPref != null ? realmSharedPref.valueString : null;
+    RealmSharedPref realmSharedPref = getSharedPref(key);
+    return realmSharedPref != null ? realmSharedPref.valueString : defValue;
   }
 
   @Nullable @Override public Set<String> getStringSet(String key, @Nullable Set<String> defValues) {
-    return null;
+    // todo
+    return new HashSet<>();
   }
 
   @Override public int getInt(String key, int defValue) {
-    return 0;
+    RealmSharedPref realmSharedPref = getSharedPref(key);
+    return realmSharedPref != null ? (int) realmSharedPref.valueLong : defValue;
   }
 
   @Override public long getLong(String key, long defValue) {
-    return 0;
+    RealmSharedPref realmSharedPref = getSharedPref(key);
+    return realmSharedPref != null ? realmSharedPref.valueLong : defValue;
   }
 
   @Override public float getFloat(String key, float defValue) {
-    return 0;
+    RealmSharedPref realmSharedPref = getSharedPref(key);
+    return realmSharedPref != null ?
+           Float.intBitsToFloat((int) realmSharedPref.valueLong) :
+           defValue;
   }
 
   @Override public boolean getBoolean(String key, boolean defValue) {
-    return false;
+    RealmSharedPref realmSharedPref = getSharedPref(key);
+    return realmSharedPref != null ?
+           realmSharedPref.valueLong == 1l :
+           defValue;
+  }
+
+  private RealmSharedPref getSharedPref(String key) {
+    return realm.where(RealmSharedPref.class).equalTo("key", key).findFirst();
   }
 
   @Override public boolean contains(String key) {
-    return false;
+    return realm.where(RealmSharedPref.class).equalTo("key", key).findFirst() != null;
   }
 
   @Override public Editor edit() {
-    return null;
+    return new RealmSharedPreferenceEditor();
   }
 
   @Override public void registerOnSharedPreferenceChangeListener(
@@ -81,31 +96,62 @@ public class RealmSharedPreferences implements SharedPreferences {
     }
 
     @Override public Editor putStringSet(String key, @Nullable Set<String> values) {
-      return null;
+      // todo
+      return this;
     }
 
-    @Override public Editor putInt(String key, int value) {
-      return null;
+    @Override public Editor putInt(final String key, final int value) {
+      sharedPreferenceOperations.add(new Runnable() {
+        @Override public void run() {
+          realm.copyToRealmOrUpdate(new RealmSharedPref(key, value));
+        }
+      });
+      return this;
     }
 
-    @Override public Editor putLong(String key, long value) {
-      return null;
+    @Override public Editor putLong(final String key, final long value) {
+      sharedPreferenceOperations.add(new Runnable() {
+        @Override public void run() {
+          realm.copyToRealmOrUpdate(new RealmSharedPref(key, value));
+        }
+      });
+      return this;
     }
 
-    @Override public Editor putFloat(String key, float value) {
-      return null;
+    @Override public Editor putFloat(final String key, final float value) {
+      sharedPreferenceOperations.add(new Runnable() {
+        @Override public void run() {
+          realm.copyToRealmOrUpdate(new RealmSharedPref(key, Float.floatToIntBits(value)));
+        }
+      });
+      return this;
     }
 
-    @Override public Editor putBoolean(String key, boolean value) {
-      return null;
+    @Override public Editor putBoolean(final String key, final boolean value) {
+      sharedPreferenceOperations.add(new Runnable() {
+        @Override public void run() {
+          realm.copyToRealmOrUpdate(new RealmSharedPref(key, value ? 1l : 0l));
+        }
+      });
+      return this;
     }
 
-    @Override public Editor remove(String key) {
-      return null;
+    @Override public Editor remove(final String key) {
+      sharedPreferenceOperations.add(new Runnable() {
+        @Override public void run() {
+          realm.where(RealmSharedPref.class).equalTo("key", key).findFirst().deleteFromRealm();
+        }
+      });
+      return this;
     }
 
     @Override public Editor clear() {
-      return null;
+      sharedPreferenceOperations.add(new Runnable() {
+        @Override public void run() {
+          realm.deleteAll();
+        }
+      });
+      return this;
     }
 
     @Override public boolean commit() {
